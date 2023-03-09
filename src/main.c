@@ -1,5 +1,5 @@
-#include <efi.h>
-#include <efilib.h>
+#include "efi.h"
+#include "efilib.h"
 
 #define EFI_TRY status =
 #define EFI_UNW if (EFI_ERROR(status)) return status // EFI "un-wrap"
@@ -23,20 +23,66 @@ EFI_STATUS wait_for_keypress() {
     EFI_INPUT_KEY Key;
     UINTN KeyEvent = 0;
 
-    EFI_TRY ST->ConIn->Reset(ST->ConIn, FALSE);
-    EFI_UNW;
-    BS->WaitForEvent(1, &ST->ConIn->WaitForKey, &KeyEvent);
-    ST->ConIn->ReadKeyStroke(ST->ConIn, &Key);
-
-    // PRINT(L"KEY: ");
-    // CHAR16 buf[6];
-    // PRINT(fmt_to_buf(Key.ScanCode, buf, 6));
-    // PRINT(L"\r\n");
+    EFI_TRY ST->ConIn->Reset(ST->ConIn, FALSE); EFI_UNW;
+    EFI_TRY BS->WaitForEvent(1, &ST->ConIn->WaitForKey, &KeyEvent); EFI_UNW;
+    EFI_TRY ST->ConIn->ReadKeyStroke(ST->ConIn, &Key); EFI_UNW;
 
     return status;
 }
 
-EFI_STATUS configure_gop (EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
+EFI_STATUS get_volume(EFI_HANDLE image, EFI_FILE_HANDLE* fh) {
+    EFI_STATUS status;
+    EFI_LOADED_IMAGE *loaded_image = NULL;
+    EFI_GUID lipGuid = EFI_LOADED_IMAGE_PROTOCOL_GUID;
+    EFI_FILE_IO_INTERFACE *IOVolume;
+    EFI_GUID fsGuid = EFI_SIMPLE_FILE_SYSTEM_PROTOCOL_GUID;
+    EFI_FILE_HANDLE Volume;
+
+    EFI_TRY BS->HandleProtocol(image, &lipGuid, (void **) &loaded_image); EFI_UNW;
+    EFI_TRY BS->HandleProtocol(loaded_image->DeviceHandle, &fsGuid, (VOID *) &IOVolume); EFI_UNW;
+    EFI_TRY IOVolume->OpenVolume(IOVolume, &Volume); EFI_UNW;
+
+    *fh = Volume;
+    return status;
+}
+
+UINT64 file_size (EFI_FILE_HANDLE FileHandle) {
+    UINT64 sz;
+    EFI_FILE_INFO *FileInfo;
+
+    FileInfo = LibFileInfo(FileHandle);
+    sz = FileInfo->FileSize;
+    FreePool(FileInfo);
+
+    return sz;
+}
+
+EFI_STATUS read_file (UINT8** buffer, UINT64* size, CHAR16* file_name, EFI_FILE_HANDLE Volume) {
+    EFI_STATUS status;
+    EFI_FILE_HANDLE FileHandle;
+
+    EFI_TRY Volume->Open(Volume, &FileHandle, file_name, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
+    if (EFI_ERROR(status)) {
+        PRINTLN("Could not open file.");
+        return status;
+    }
+
+    UINT64 ReadSize = file_size(FileHandle);
+    UINT8 *Buffer = AllocatePool(ReadSize);
+
+    EFI_TRY FileHandle->Read(FileHandle, &ReadSize, Buffer);
+    if (EFI_ERROR(status)) {
+        PRINTLN("Could not read file.");
+        return status;
+    }
+    EFI_TRY FileHandle->Close(FileHandle); EFI_UNW;
+
+    *buffer = Buffer;
+    *size = ReadSize;
+    return status;
+}
+
+EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
     EFI_STATUS status;
     EFI_GUID gopGuid = EFI_GRAPHICS_OUTPUT_PROTOCOL_GUID;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
@@ -102,44 +148,53 @@ EFI_STATUS configure_gop (EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
     return status;
 }
 
-EFI_STATUS render() {
+EFI_STATUS render(UINT8* data, UINT64 sz) {
     EFI_STATUS status;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
 
     PRINTLN("Initializing GOP ...");
-    EFI_TRY configure_gop(&gop);
-    EFI_UNW;
+    EFI_TRY configure_gop(&gop); EFI_UNW;
 
     for (int x = 0; x < 1280; x++) {
         for (int y = 0; y < 720; y++) {
-            *((uint32_t*)(gop->Mode->FrameBufferBase + 4 * gop->Mode->Info->PixelsPerScanLine * y + 4 * x)) = 0x000000FF;
+            *((uint32_t *) (gop->Mode->FrameBufferBase + 4 * gop->Mode->Info->PixelsPerScanLine * y + 4 * x)) = 0x000000FF;
         }
     }
 
     return status;
 }
 
+/* TODO:
+ * - refactor print to use gnu-efi print
+ * - fix file IO
+ * - code cleanup
+ * - refactor into files
+ */
+
 EFI_STATUS efi_main(EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
     EFI_STATUS status;
     ST = SystemTable;
     BS = ST->BootServices;
 
-    EFI_TRY ST->ConOut->ClearScreen(ST->ConOut);
-    EFI_UNW;
+    EFI_FILE_HANDLE Volume;
+    UINT8* data;
+    UINT64 sz;
+    EFI_TRY get_volume(ImageHandle, &Volume); EFI_UNW;
+    EFI_TRY read_file(&data, &sz, L"", Volume); EFI_UNW;
+
+    EFI_TRY ST->ConOut->ClearScreen(ST->ConOut); EFI_UNW;
     PRINTLN("UEFI/RR-m9 System 1.0");
     PRINTLN("Ulrich Barnstedt 2023");
     PRINTLN("");
     PRINTLN("Press any key to continue ...");
 
-    EFI_TRY wait_for_keypress();
-    EFI_UNW;
+    EFI_TRY wait_for_keypress(); EFI_UNW;
     PRINTLN("");
 
-    EFI_TRY render();
-    EFI_UNW;
+    EFI_TRY render(data, sz); EFI_UNW;
+    FreePool(data);
 
     PRINTLN("Press any key to exit ...");
-    EFI_TRY wait_for_keypress();
-    EFI_UNW;
+    EFI_TRY wait_for_keypress(); EFI_UNW;
     return status;
 }

@@ -1,14 +1,22 @@
 SRC_DIR := ./src
 OBJ_DIR := ./obj
 OUT_DIR := ./out
+GNU_EFI_DIR := ./gnu-efi-code
 SRC_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
-CC := x86_64-w64-mingw32-gcc
-CFLAGS := -ffreestanding -I/usr/include/efi -I/usr/include/efi/x86_64 -I/usr/include/efi/protocol
-LDFLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main
+CROSS_COMPILE := x86_64-w64-mingw32-
+CC := $(CROSS_COMPILE)gcc
+CFLAGS := -ffreestanding -I$(GNU_EFI_DIR)/inc -I$(GNU_EFI_DIR)/inc/x86_64 -I$(GNU_EFI_DIR)/inc/protocol
+LDFLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -L $(GNU_EFI_DIR)/lib/
+LIBS :=  -l efi
 
 all: $(OUT_DIR)/fat.img
+
+# -------- GNU-EFI library
+
+$(GNU_EFI_DIR)/lib/libefi.a:
+	CROSS_COMPILE=$(CROSS_COMPILE) make -C $(GNU_EFI_DIR)/lib
 
 # -------- Directories / C sources
 
@@ -21,8 +29,8 @@ $(OUT_DIR):
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OUT_DIR)/BOOTX64.EFI: $(OBJ_FILES) | $(OUT_DIR)
-	$(CC) $(LDFLAGS) -o $@ $^
+$(OUT_DIR)/BOOTX64.EFI: $(OBJ_FILES) | $(OUT_DIR) $(GNU_EFI_DIR)/lib/libefi.a
+	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
 
 # -------- FAT-12 UEFI Image
 
