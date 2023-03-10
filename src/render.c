@@ -28,10 +28,9 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
     PRINTLN("Available modes:");
     int target = -1;
     for (int i = 0; i < numModes; i++) {
-        TRY gop->QueryMode(gop, i, &SizeOfInfo, &info);
-        UNW;
+        TRY gop->QueryMode(gop, i, &SizeOfInfo, &info); UNW;
 
-        if (info->HorizontalResolution == 1280 && info->VerticalResolution == 720) {
+        if (info->HorizontalResolution == TARGET_X && info->VerticalResolution == TARGET_Y) {
             target = i;
         }
 
@@ -56,23 +55,30 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
         return EFI_UNSUPPORTED;
     }
 
-    TRY gop->SetMode(gop, target);
-    UNW;
+    TRY gop->SetMode(gop, target); UNW;
 
     return status;
 }
 
-EFI_STATUS render(UINT8* data, UINT64 sz) {
+EFI_STATUS render (UINT32* data, UINT64 sz) {
     EFI_STATUS status;
     EFI_GRAPHICS_OUTPUT_PROTOCOL *gop;
+    UINT64 frame_size = sizeof(UINT32) * TARGET_Y * TARGET_X;
+    UINT64 frame_count = sz / frame_size;
+    UINT32* at = data;
 
     PRINTLN("Initializing GOP ...");
     TRY configure_gop(&gop); UNW;
 
-    for (int x = 0; x < 1280; x++) {
-        for (int y = 0; y < 720; y++) {
-            *((uint32_t *) (gop->Mode->FrameBufferBase + 4 * gop->Mode->Info->PixelsPerScanLine * y + 4 * x)) = 0x000000FF;
+    for (int f = 0; f < frame_count; f++) {
+        for (int x = 0; x < 1280; x++) {
+            for (int y = 0; y < 720; y++) {
+                *((uint32_t *) (gop->Mode->FrameBufferBase + 4 * gop->Mode->Info->PixelsPerScanLine * y + 4 * x)) = *at;
+                at += 1;
+            }
         }
+
+        //TODO: wait?
     }
 
     return status;

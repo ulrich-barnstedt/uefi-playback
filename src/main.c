@@ -22,12 +22,12 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
     TRY wait_for_keypress(); UNW;
     PRINTLN("");
 
-    UINT8* data;
+    UINT32* data;
     UINT64 sz;
     TRY load_data(&data, &sz, L"", ImageHandle); UNW;
 
     TRY render(data, sz); UNW;
-    //TODO: free data pool
+    free(data);
 
     PRINTLN("Press any key to exit ...");
     TRY wait_for_keypress(); UNW;

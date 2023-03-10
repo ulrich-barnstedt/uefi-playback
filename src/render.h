@@ -1,4 +1,7 @@
 #pragma once
 #include "helpers.h"
 
-EFI_STATUS render(UINT8 *data, UINT64 sz);
+#define TARGET_Y 720
+#define TARGET_X 1280
+
+EFI_STATUS render (UINT32 *data, UINT64 sz);

@@ -16,18 +16,25 @@ EFI_STATUS get_volume(EFI_HANDLE image, EFI_FILE_HANDLE* fh) {
     return status;
 }
 
-UINT64 file_size (EFI_FILE_HANDLE FileHandle) {
-    UINT64 sz;
+EFI_STATUS file_size (EFI_FILE_HANDLE FileHandle, UINT64* sz) {
+    EFI_STATUS status = EFI_SUCCESS;
     EFI_FILE_INFO *FileInfo;
+    UINTN BufferSize;
 
-    FileInfo = LibFileInfo(FileHandle);
-    sz = FileInfo->FileSize;
-    FreePool(FileInfo);
+    FileInfo = NULL;
+    BufferSize = SIZE_OF_EFI_FILE_INFO + 200;
 
-    return sz;
+    while (expand_buffer(&status, (VOID **) &FileInfo, BufferSize)) {
+        TRY FileHandle->GetInfo(FileHandle, &GenericFileInfo, &BufferSize, FileInfo);
+    }
+
+    *sz = FileInfo->FileSize;
+    free(FileInfo);
+
+    return status;
 }
 
-EFI_STATUS read_file (UINT8** buffer, UINT64* size, CHAR16* file_name, EFI_FILE_HANDLE Volume) {
+EFI_STATUS read_file (UINT32** buffer, UINT64* size, CHAR16* file_name, EFI_FILE_HANDLE Volume) {
     EFI_STATUS status;
     EFI_FILE_HANDLE FileHandle;
 
@@ -37,8 +44,14 @@ EFI_STATUS read_file (UINT8** buffer, UINT64* size, CHAR16* file_name, EFI_FILE_
         return status;
     }
 
-    UINT64 ReadSize = file_size(FileHandle);
-    UINT8 *Buffer = AllocatePool(ReadSize);
+    UINT64 ReadSize;
+    TRY file_size(FileHandle, &ReadSize); UNW;
+    UINT32 *Buffer = malloc(ReadSize);
+
+    CHAR16 buf[20];
+    PRINT(L"Reading ");
+    PRINT(fmt_num(ReadSize, buf, 20));
+    PRINT(L" bytes ...\r\n");
 
     TRY FileHandle->Read(FileHandle, &ReadSize, Buffer);
     if (EFI_ERROR(status)) {
@@ -52,6 +65,16 @@ EFI_STATUS read_file (UINT8** buffer, UINT64* size, CHAR16* file_name, EFI_FILE_
     return status;
 }
 
-EFI_STATUS load_data (UINT8** buffer, UINT64* size, CHAR16* file_name, EFI_HANDLE image) {
+EFI_STATUS load_data (UINT32** buffer, UINT64* size, CHAR16* file_name, EFI_HANDLE image) {
+    EFI_STATUS status;
+    EFI_FILE_HANDLE volume;
 
+    PRINTLN("Getting volume handle ...");
+    TRY get_volume(image, &volume); UNW;
+
+    PRINTLN("Loading data ...");
+    TRY read_file(buffer, size, file_name, volume); UNW;
+
+    PRINTLN("Loaded data.");
+    return status;
 }
