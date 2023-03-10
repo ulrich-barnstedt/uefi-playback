@@ -8,8 +8,7 @@ OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC_FILES))
 CROSS_COMPILE := x86_64-w64-mingw32-
 CC := $(CROSS_COMPILE)gcc
 CFLAGS := -ffreestanding -I$(GNU_EFI_DIR)/inc -I$(GNU_EFI_DIR)/inc/x86_64 -I$(GNU_EFI_DIR)/inc/protocol
-LDFLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main -L $(GNU_EFI_DIR)/lib/
-LIBS :=  -l efi
+LDFLAGS := -nostdlib -Wl,-dll -shared -Wl,--subsystem,10 -e efi_main
 
 all: $(OUT_DIR)/fat.img
 
@@ -29,8 +28,8 @@ $(OUT_DIR):
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(OUT_DIR)/BOOTX64.EFI: $(OBJ_FILES) | $(OUT_DIR) $(GNU_EFI_DIR)/lib/libefi.a
-	$(CC) $(LDFLAGS) -o $@ $^ $(LIBS)
+$(OUT_DIR)/BOOTX64.EFI: $(OBJ_FILES) $(GNU_EFI_DIR)/lib/libefi.a | $(OUT_DIR)
+	$(CC) $(LDFLAGS) -o $@ $^
 
 # -------- FAT-12 UEFI Image
 
