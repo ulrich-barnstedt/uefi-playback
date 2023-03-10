@@ -9,3 +9,4 @@
 
 EFI_STATUS wait_for_keypress ();
 EFI_STATUS get_keypress (CHAR16* ch);
+CHAR16* fmt_num (int v, CHAR16 *ptr, int size);
