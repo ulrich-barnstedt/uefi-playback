@@ -9,7 +9,7 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
 
     TRY BS->LocateProtocol(&gopGuid, NULL, (void **) &gop);
     if (EFI_ERROR(status)) {
-        PRINTLN("Could not locate GOP.");
+        EPRINTLN("Could not locate GOP.");
         return status;
     }
     *gop_struct = gop;
@@ -17,7 +17,7 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
     TRY gop->QueryMode(gop, gop->Mode == NULL ? 0 : gop->Mode->Mode, &SizeOfInfo, &info);
     if (status == EFI_NOT_STARTED) TRY gop->SetMode(gop, 0);
     if (EFI_ERROR(status)) {
-        PRINTLN("Unable to get native GOP mode.");
+        EPRINTLN("Unable to get native GOP mode.");
         return status;
     } else {
         nativeMode = gop->Mode->Mode;
@@ -52,11 +52,7 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
         PRINT(fmt_num(target, buf, 6));
         PRINT(L"\r\n");
     } else {
-        PRINTLN("Your system does not support the required 1280x720 mode.");
-        PRINTLN("Press any key to exit ...");
-        TRY wait_for_keypress();
-        UNW;
-
+        EPRINTLN("Your system does not support the targeted resolution.");
         return EFI_UNSUPPORTED;
     }
 

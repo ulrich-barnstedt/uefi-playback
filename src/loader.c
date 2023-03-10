@@ -33,7 +33,7 @@ EFI_STATUS read_file (UINT8** buffer, UINT64* size, CHAR16* file_name, EFI_FILE_
 
     TRY Volume->Open(Volume, &FileHandle, file_name, EFI_FILE_MODE_READ, EFI_FILE_READ_ONLY | EFI_FILE_HIDDEN | EFI_FILE_SYSTEM);
     if (EFI_ERROR(status)) {
-        Print(L"Could not open file.");
+        EPRINTLN("Could not open file.");
         return status;
     }
 
@@ -42,7 +42,7 @@ EFI_STATUS read_file (UINT8** buffer, UINT64* size, CHAR16* file_name, EFI_FILE_
 
     TRY FileHandle->Read(FileHandle, &ReadSize, Buffer);
     if (EFI_ERROR(status)) {
-        Print(L"Could not read file.");
+        EPRINTLN("Could not read file.");
         return status;
     }
     TRY FileHandle->Close(FileHandle); UNW;
