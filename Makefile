@@ -8,11 +8,15 @@ SRC_FILES := $(wildcard $(SRC_DIR)/*.c)
 OBJ_FILES := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC_FILES))
 
 # data & iso
-IMG_SIZE := 128000
+IMG_SIZE := 192000
 INPUT_FILE := video.mp4
-FRAME_COUNT := 25
+FRAME_COUNT := 50
+FPS = 10
 FRAME_WIDTH := 1280
 FRAME_HEIGHT := 720
+# NOTE:
+# frame height and width also have to be adjusted in render.h
+# FPS count should be reflected in render delay in render.h
 
 # compilation
 CROSS_COMPILE := x86_64-w64-mingw32-
@@ -30,7 +34,7 @@ $(GNU_EFI_DIR)/lib/libefi.a:
 # -------- ffmpeg pre-processing
 
 $(OUT_DIR)/data: $(IN_DIR)/$(INPUT_FILE)
-	ffmpeg -i $(IN_DIR)/$(INPUT_FILE) -frames $(FRAME_COUNT) -r 5 -pix_fmt bgra -s $(FRAME_WIDTH)x$(FRAME_HEIGHT) -f rawvideo $(OUT_DIR)/data
+	ffmpeg -i $(IN_DIR)/$(INPUT_FILE) -frames $(FRAME_COUNT) -r $(FPS) -pix_fmt bgra -s $(FRAME_WIDTH)x$(FRAME_HEIGHT) -f rawvideo $(OUT_DIR)/data
 
 # -------- Directories / C sources
 

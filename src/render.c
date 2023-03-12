@@ -30,7 +30,11 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
     for (int i = 0; i < numModes; i++) {
         TRY gop->QueryMode(gop, i, &SizeOfInfo, &info); UNW;
 
-        if (info->HorizontalResolution >= TARGET_X && info->VerticalResolution >= TARGET_Y) {
+        if (
+            target == -1 &&
+            info->HorizontalResolution >= TARGET_X && info->VerticalResolution >= TARGET_Y &&
+            TARGET_Y / TARGET_X == info->VerticalResolution / info->HorizontalResolution
+        ) {
             target = i;
         }
 
@@ -51,7 +55,7 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
         PRINT(fmt_num(target, buf, 6));
         PRINT(L"\r\n");
     } else {
-        EPRINTLN("Your system does not support the minimum targeted resolution.");
+        EPRINTLN("Your system does not support the minimum targeted resolution or correct aspect ratio.");
         return EFI_UNSUPPORTED;
     }
 
