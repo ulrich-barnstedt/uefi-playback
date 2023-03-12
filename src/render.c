@@ -30,7 +30,7 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
     for (int i = 0; i < numModes; i++) {
         TRY gop->QueryMode(gop, i, &SizeOfInfo, &info); UNW;
 
-        if (info->HorizontalResolution == TARGET_X && info->VerticalResolution == TARGET_Y) {
+        if (info->HorizontalResolution >= TARGET_X && info->VerticalResolution >= TARGET_Y) {
             target = i;
         }
 
@@ -51,7 +51,7 @@ EFI_STATUS configure_gop(EFI_GRAPHICS_OUTPUT_PROTOCOL **gop_struct) {
         PRINT(fmt_num(target, buf, 6));
         PRINT(L"\r\n");
     } else {
-        EPRINTLN("Your system does not support the targeted resolution.");
+        EPRINTLN("Your system does not support the minimum targeted resolution.");
         return EFI_UNSUPPORTED;
     }
 
@@ -70,15 +70,17 @@ EFI_STATUS render (UINT32* data, UINT64 sz) {
     PRINTLN("Initializing GOP ...");
     TRY configure_gop(&gop); UNW;
 
+    PRINTLN("Rendering ...");
+
     for (int f = 0; f < frame_count; f++) {
-        for (int x = 0; x < 1280; x++) {
-            for (int y = 0; y < 720; y++) {
+        for (int y = 0; y < TARGET_Y; y++) {
+            for (int x = 0; x < TARGET_X; x++) {
                 *((uint32_t *) (gop->Mode->FrameBufferBase + 4 * gop->Mode->Info->PixelsPerScanLine * y + 4 * x)) = *at;
                 at += 1;
             }
         }
 
-        //TODO: wait?
+        TRY BS->Stall(RENDER_DELAY); UNW;
     }
 
     return status;

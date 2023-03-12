@@ -4,10 +4,6 @@
 #include "loader.h"
 #include "render.h"
 
-/* TODO:
- * test which gnu-efi calls work, and refactor all others to use own code (direct efi functions)
- */
-
 EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
     EFI_STATUS status;
     ST = SystemTable;
@@ -24,7 +20,7 @@ EFI_STATUS efi_main (EFI_HANDLE ImageHandle, EFI_SYSTEM_TABLE *SystemTable) {
 
     UINT32* data;
     UINT64 sz;
-    TRY load_data(&data, &sz, L"", ImageHandle); UNW;
+    TRY load_data(&data, &sz, L"data", ImageHandle); UNW;
 
     TRY render(data, sz); UNW;
     free(data);
