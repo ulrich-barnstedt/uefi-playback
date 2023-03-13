@@ -8,7 +8,7 @@ Headers for the UEFI "API" are taken from [`gnu-efi`](https://sourceforge.net/pr
 ### Dependencies and limitations
 
 This project requires the following dependencies to run:`binutils-mingw-w64 gcc-mingw-w64 mtools make ffmpeg`  
-Further dependencies are needed to run it in a VM: `xorriso qemu ovmf`  
+Further dependencies are needed to run it in a VM: `qemu ovmf`  
 Known limitations:
  - Due to frames being stored uncompressed and being loaded all at once, large video are not recommended and will have long loading times
  - Due to inefficiencies in copying from RAM to the framebuffer, only low framerates can be achieved and tearing will occur

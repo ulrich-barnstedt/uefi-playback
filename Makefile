@@ -60,18 +60,8 @@ $(OUT_DIR)/fat.img: $(OUT_DIR)/BOOTX64.EFI $(OUT_DIR)/data
 	mcopy -i $(OUT_DIR)/fat.img $(OUT_DIR)/BOOTX64.EFI ::/EFI/BOOT
 	mcopy -i $(OUT_DIR)/fat.img $(OUT_DIR)/data ::
 
-# -------- QEMU
-
-$(OUT_DIR)/cdimage.iso: $(OUT_DIR)/fat.img
-	mkdir -p $(OUT_DIR)/iso
-	cp $(OUT_DIR)/fat.img $(OUT_DIR)/iso
-	xorriso -as mkisofs -R -f -e fat.img -no-emul-boot -o $(OUT_DIR)/cdimage.iso $(OUT_DIR)/iso
-
-$(OUT_DIR)/bios.bin:
-	cp /usr/share/ovmf/OVMF.fd $(OUT_DIR)/bios.bin
-
-QEMU: $(OUT_DIR)/cdimage.iso $(OUT_DIR)/bios.bin
-	qemu-system-x86_64 -drive file=${OUT_DIR}/bios.bin,format=raw,if=pflash -m 512M -net none -cdrom $(OUT_DIR)/cdimage.iso
+QEMU: $(OUT_DIR)/fat.img
+	qemu-system-x86_64 -bios /usr/share/ovmf/OVMF.fd -net none -m 512m -cdrom $(OUT_DIR)/fat.img
 
 # -------- Clean
 
